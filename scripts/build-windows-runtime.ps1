@@ -139,7 +139,8 @@ try {
     # must not be selectable as the public FrameMeld entry point.
     Move-Item -LiteralPath (Join-Path $ffmpegDir "bin\ffmpeg.exe") -Destination (Join-Path $ffmpegDir "ffmpeg-core.exe")
     Move-Item -LiteralPath (Join-Path $ffmpegDir "bin\ffprobe.exe") -Destination (Join-Path $ffmpegDir "ffprobe.exe")
-    Move-Item -LiteralPath (Join-Path $ffmpegDir "bin\ffplay.exe") -Destination (Join-Path $ffmpegDir "ffplay.exe")
+    # FrameMeld is a headless runtime and exposes FFmpeg plus FFprobe only.
+    # FFplay is deliberately omitted to avoid shipping an unused 200+ MiB GUI binary.
     Remove-Item -LiteralPath (Join-Path $ffmpegDir "bin") -Recurse -Force
 
     $pythonArchive = Get-Asset "Python portable" $Manifest.python.url $Manifest.python.sha256

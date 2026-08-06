@@ -11,6 +11,8 @@ dist\framemeld-runtime\ffmpeg.exe
 普通 FFmpeg/FFprobe 参数会原样转发。只有显式添加 `-framemeld` 时才会进入
 FrameMeld 帧处理管线，因此同一个可执行文件仍可用于普通转码、封装和探测。
 `-blur` 仅作为旧版兼容别名保留。
+运行时不分发 `ffplay.exe`：FrameMeld 是无界面导出工具，Insight Agent、
+LiteCut 与合辑工作台只依赖 `ffmpeg.exe` 和 `ffprobe.exe`。
 
 ```powershell
 dist\framemeld-runtime\ffmpeg.exe -framemeld `

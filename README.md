@@ -4,6 +4,8 @@ FrameMeld builds a Windows, headless, FFmpeg-compatible runtime for GPU frame
 interpolation, duplicate-frame repair, motion blur, time scaling, and color
 processing. Ordinary FFmpeg and FFprobe commands are forwarded unchanged;
 FrameMeld processing is activated only by the explicit `-framemeld` command.
+FFplay is intentionally not bundled because FrameMeld has no interactive
+playback UI and downstream integrations use only FFmpeg and FFprobe.
 
 The runtime uses a pinned FFmpeg full build, VapourSynth R70, RIFE 4.26 through
 NCNN Vulkan, and compatibility plugins for SVPFlow, MVTools, L-SMASH Source,
