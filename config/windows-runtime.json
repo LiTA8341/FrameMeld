@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "runtime_name": "framemeld-runtime-git-f2e5eff3ff-engine1",
+  "ffmpeg": {
+    "version": "2026-05-06-git-f2e5eff3ff-full_build",
+    "url": "https://github.com/GyanD/codexffmpeg/releases/download/2026-05-06-git-f2e5eff3ff/ffmpeg-2026-05-06-git-f2e5eff3ff-full_build.zip",
+    "sha256": "001dde67502f576b3db3eed7a104e81984d0e68ed9fa0ae39e05f56d4a4c9996",
+    "archive_root": "ffmpeg-2026-05-06-git-f2e5eff3ff-full_build",
+    "preferred_local_file": "ffmpeg-2026-05-06-git-f2e5eff3ff-full_build.zip"
+  },
+  "python": {
+    "version": "3.12.10",
+    "url": "https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip",
+    "sha256": "4acbed6dd1c744b0376e3b1cf57ce906f9dc9e95e68824584c8099a63025a3c3"
+  },
+  "vapoursynth": {
+    "version": "R70",
+    "url": "https://github.com/vapoursynth/vapoursynth/releases/download/R70/VapourSynth64-Portable-R70.zip",
+    "sha256": "5930dc57f27173bc54fb1ceb743c3841c072ab21044dff3aabb667aeee679540"
+  },
+  "engine": {
+    "name": "framemeld-headless-engine",
+    "api_version": 1,
+    "upstream_algorithm_reference": "f0e/blur@6fd0eccf7bf1c142a80473a8b0b937558e498975"
+  },
+  "plugins": {
+    "akarin": {
+      "version": "v0.96g3",
+      "url": "https://github.com/AkarinVS/vapoursynth-plugin/releases/download/v0.96/akarin-release-lexpr-amd64-v0.96g3.7z",
+      "sha256": "1b28b448b4b5a5d0cc2a715433ea4940ef4dcb24b1244f43bdae5ec48a83db60",
+      "member": "akarin.dll"
+    },
+    "bestsource": {
+      "version": "R11",
+      "url": "https://github.com/vapoursynth/bestsource/releases/download/R11/BestSource-R11.7z",
+      "sha256": "d6c88a0b5f6a72d80602a59f5b365dae6ad2d2ad48e7b876a1392e005f5387c0",
+      "member": "BestSource.dll"
+    },
+    "lsmashsource": {
+      "version": "r1194.0.0.0",
+      "url": "https://github.com/HomeOfAviSynthPlusEvolution/L-SMASH-Works/releases/download/1194.0.0.0/L-SMASH-Works-r1194.0.0.0.7z",
+      "sha256": "30569c059b2be3b573b81c958516c76319233efc81fa77ba58d03fe3d420e2de",
+      "member": "x64/LSMASHSource.dll",
+      "cache_file": "lsmash.7z"
+    },
+    "mvtools": {
+      "version": "v24",
+      "url": "https://github.com/dubhater/vapoursynth-mvtools/releases/download/v24/vapoursynth-mvtools-v24-win64.7z",
+      "sha256": "b9883003eed100d4ffd44344b658554076b89da6d45041b378e675720426bc95",
+      "member": "libmvtools.dll",
+      "cache_file": "mvtools.7z"
+    },
+    "rife": {
+      "version": "r9_mod_v33",
+      "url": "https://github.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan/releases/download/r9_mod_v33/librife_windows_x86-64.dll",
+      "sha256": "36a25b471be88e6f915320c818022dc8657dd9beac22a8c3158bd7f4260cc410"
+    },
+    "adjust": {
+      "version": "v1",
+      "url": "https://github.com/f0e/Vapoursynth-adjust/releases/download/v1/adjust.dll",
+      "sha256": "e303847d434200672da3e5df15d8ad63b7b92d8f6c65ec799a2eb16cb564cca0"
+    },
+    "svpflow": {
+      "version": "4.2.0.142",
+      "url": "https://web.archive.org/web/20190322064557if_/http://www.svp-team.com/files/gpl/svpflow-4.2.0.142.zip",
+      "sha256": "02e89dc04b0c29e15a9db7cd23801477a2f672d317a13cb7f2f8577192694c63",
+      "members": [
+        "svpflow-4.2.0.142/lib-windows/vapoursynth/x64/svpflow1_vs64.dll",
+        "svpflow-4.2.0.142/lib-windows/vapoursynth/x64/svpflow2_vs64.dll"
+      ],
+      "cache_file": "svpflow.zip"
+    }
+  },
+  "rife_model": {
+    "name": "rife-v4.26_ensembleFalse",
+    "bin_url": "https://raw.githubusercontent.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan/c3ec6aabc07c8fa37a4f58d7fed9e2ad1fc1b13f/models/rife-v4.26_ensembleFalse/flownet.bin",
+    "bin_sha256": "94d58e30b75d7c7609cfa6f3bdad524deddd14f5f75e85c36d2f827ef5c64731",
+    "param_url": "https://raw.githubusercontent.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan/c3ec6aabc07c8fa37a4f58d7fed9e2ad1fc1b13f/models/rife-v4.26_ensembleFalse/flownet.param",
+    "param_sha256": "79f16c28903f93f8308f0c4c947f8c7e0c17d99a57b85473e5f298dd578d137b"
+  }
+}

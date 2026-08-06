@@ -1,0 +1,10 @@
+{
+  "interpolation_method": "rife",
+  "interpolated_fps": "360",
+  "performance_mode": "balanced",
+  "performance_samples": 6,
+  "deduplicate_method": "rife",
+  "blur_output_fps": 60,
+  "blur_weighting": "vegas",
+  "gpu_interpolation": true
+}

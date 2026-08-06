@@ -1,0 +1,9 @@
+{
+  "interpolation_method": "svp",
+  "interpolated_fps": "120",
+  "performance_mode": "exact",
+  "deduplicate_method": "old",
+  "blur_output_fps": 60,
+  "blur_weighting": "equal",
+  "gpu_interpolation": true
+}

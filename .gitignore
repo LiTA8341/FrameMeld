@@ -1,0 +1,48 @@
+# Generated runtimes, downloads, build products, and local experiments
+dist/
+.cache/
+.tmp/
+build/
+out/
+
+# Local upstream comparison checkout (the pinned commit is documented in NOTICE.md)
+blur-master/
+
+# Private project handoff and locally downloaded archives
+NEW_PROJECT_HANDOFF.zh-CN.md
+*.zip
+*.7z
+*.tar
+*.tar.gz
+
+# Python and test caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Native build products
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.dll
+*.exe
+
+# Media generated during validation
+*.mp4
+*.mkv
+*.mov
+*.avi
+*.webm
+*.y4m
+
+# Editors and operating systems
+.vs/
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini

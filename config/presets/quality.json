@@ -1,0 +1,9 @@
+{
+  "interpolation_method": "rife",
+  "interpolated_fps": "240",
+  "performance_mode": "exact",
+  "deduplicate_method": "rife",
+  "blur_output_fps": 60,
+  "blur_weighting": "gaussian_sym",
+  "gpu_interpolation": true
+}
