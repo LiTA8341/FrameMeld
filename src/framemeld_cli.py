@@ -11,7 +11,12 @@ import insight_blur
 CAPABILITIES = {
     "protocol": "org.framemeld.cli",
     "api_version": 1,
-    "features": ["auto-profile", "rife", "motion-blur"],
+    "features": [
+        "auto-profile",
+        "rife",
+        "motion-blur",
+        "host-managed-encoder-fallback",
+    ],
     "license": "GPL-3.0-only",
 }
 
@@ -31,6 +36,10 @@ The standard FFmpeg options -y, -hide_banner, -loglevel, -c:v, -cq/-crf,
 -c:a, -b:a and the NVENC -gpu selector are accepted. Run with --help-full
 to list all processing options. Use -c:v h264 or -c:v h265 for cross-vendor
 automatic hardware probing with a same-codec software fallback.
+
+Hosts that already manage encoder retries can pass
+--host-managed-encoder-fallback to receive the first attempt's real exit code
+instead of allowing FrameMeld to retry silently with a software encoder.
 
 Performance modes:
   --performance-mode original   Upstream-compatible full RIFE and deduplication
