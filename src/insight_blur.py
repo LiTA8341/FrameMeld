@@ -170,7 +170,14 @@ def build_commands(
     }
     overrides.update({key: value for key, value in cli_values.items() if value is not None})
     explicit_blur_amount = "blur_amount" in overrides
-    settings = merge_settings(overrides, model)
+    # RIFE's Windows model preflight uses a narrow-character path.  Supplying
+    # the pinned ASCII-only path relative to the VapourSynth script directory
+    # avoids leaking a non-ASCII installation directory into that plugin.
+    settings = merge_settings(
+        overrides,
+        model.relative_to(engine_script.parent),
+        resolve_model_path=False,
+    )
     performance = apply_performance_policy(
         settings,
         explicit_interpolation_target=args.interpolate_fps is not None,
@@ -253,7 +260,12 @@ def build_commands(
 
 def run_pipeline(vspipe_command: list[str], ffmpeg_command: list[str]) -> tuple[int, int]:
     creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-    vspipe = subprocess.Popen(vspipe_command, stdout=subprocess.PIPE, creationflags=creationflags)
+    vspipe = subprocess.Popen(
+        vspipe_command,
+        stdout=subprocess.PIPE,
+        creationflags=creationflags,
+        cwd=runtime_root() / "lib",
+    )
     assert vspipe.stdout is not None
     ffmpeg = subprocess.Popen(ffmpeg_command, stdin=vspipe.stdout, creationflags=creationflags)
     vspipe.stdout.close()

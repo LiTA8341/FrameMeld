@@ -133,14 +133,19 @@ def verified_frame_rate_profile(source_fps: Fraction | None) -> dict[str, Any] |
     return None
 
 
-def merge_settings(overrides: dict[str, Any] | None, model_path: Path) -> dict[str, Any]:
+def merge_settings(
+    overrides: dict[str, Any] | None,
+    model_path: Path,
+    *,
+    resolve_model_path: bool = True,
+) -> dict[str, Any]:
     settings = deepcopy(DEFAULT_SETTINGS)
     if overrides:
         unknown = sorted(set(overrides) - set(settings) - {"rife_model"})
         if unknown:
             raise ValueError(f"Unknown Blur setting(s): {', '.join(unknown)}")
         settings.update(overrides)
-    settings["rife_model"] = str(model_path.resolve())
+    settings["rife_model"] = str(model_path.resolve() if resolve_model_path else model_path)
     validate_settings(settings)
     return settings
 
