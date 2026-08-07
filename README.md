@@ -66,6 +66,8 @@ features, and the `GPL-3.0-only` license boundary.
 Use `-c:v h264` or `-c:v h265` for automatic NVIDIA/AMD/Intel hardware probing
 with a same-codec software fallback. Explicit encoder names such as
 `hevc_nvenc`, `hevc_amf`, `hevc_qsv`, and `libx265` remain available.
+All H.264 paths explicitly emit High Profile with 8-bit YUV 4:2:0 for video
+platform and social-media delivery; HEVC paths retain their Main defaults.
 
 ## Automatic frame-rate policy
 

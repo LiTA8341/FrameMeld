@@ -148,6 +148,17 @@ class EncoderArgumentTests(unittest.TestCase):
                 args = encoder_args(encoder, 18)
                 self.assertEqual(args[:2], ["-c:v", encoder])
 
+    def test_h264_profiles_are_pinned_high_for_platform_delivery(self) -> None:
+        for encoder in ("h264_nvenc", "h264_qsv", "h264_amf", "libx264"):
+            with self.subTest(encoder=encoder):
+                args = encoder_args(encoder, 18)
+                self.assertEqual(args[args.index("-profile:v") + 1], "high")
+
+    def test_hevc_profiles_remain_encoder_defaults(self) -> None:
+        for encoder in ("hevc_nvenc", "hevc_qsv", "hevc_amf", "libx265"):
+            with self.subTest(encoder=encoder):
+                self.assertNotIn("-profile:v", encoder_args(encoder, 18))
+
 
 if __name__ == "__main__":
     unittest.main()
