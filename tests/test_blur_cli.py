@@ -24,6 +24,7 @@ class FfmpegCliTranslationTests(unittest.TestCase):
         self.assertEqual(capabilities["api_version"], 1)
         self.assertEqual(capabilities["license"], "GPL-3.0-only")
         self.assertIn("motion-blur", capabilities["features"])
+        self.assertIn("host-managed-encoder-fallback", capabilities["features"])
 
     def test_h265_alias_is_forwarded_to_encoder_planner(self) -> None:
         translated = framemeld_cli.translate(
@@ -96,6 +97,34 @@ class FullExportFallbackTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(runner.call_count, 2)
             self.assertEqual(builder.call_args_list[1].kwargs["encoder_override"], "libx265")
+
+    def test_host_managed_failure_does_not_retry_inside_framemeld(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "input.mp4"
+            output = Path(directory) / "output.mp4"
+            source.write_bytes(b"test")
+            detail = {"encoder": "h264_nvenc", "encoder_fallback": "libx264"}
+            with (
+                patch.object(
+                    insight_blur,
+                    "build_commands",
+                    return_value=(["vspipe-hw"], ["ffmpeg-hw"], detail),
+                ) as builder,
+                patch.object(insight_blur, "run_pipeline", return_value=(1, 0)) as runner,
+            ):
+                code = insight_blur.main(
+                    [
+                        str(source),
+                        str(output),
+                        "--encoder",
+                        "h264_nvenc",
+                        "--host-managed-encoder-fallback",
+                    ]
+                )
+
+            self.assertEqual(code, 1)
+            builder.assert_called_once()
+            runner.assert_called_once()
 
 
 class UnicodeRuntimePathTests(unittest.TestCase):

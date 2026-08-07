@@ -350,6 +350,11 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--audio-codec", choices=("aac", "copy"), default="aac")
     result.add_argument("--audio-bitrate", default="320k")
     result.add_argument("--loglevel", default="error")
+    result.add_argument(
+        "--host-managed-encoder-fallback",
+        action="store_true",
+        help="Return the requested encoder failure to the host instead of retrying in FrameMeld",
+    )
     result.add_argument("--dry-run", action="store_true")
     return result
 
@@ -368,7 +373,13 @@ def main(argv: list[str] | None = None) -> int:
 
         fallback = detail.get("encoder_fallback")
         selected = str(detail.get("encoder") or "")
-        if ffmpeg_code != 0 and isinstance(fallback, str) and fallback and fallback != selected:
+        if (
+            ffmpeg_code != 0
+            and not args.host_managed_encoder_fallback
+            and isinstance(fallback, str)
+            and fallback
+            and fallback != selected
+        ):
             print(
                 f"framemeld: hardware export failed with {selected}; retrying with {fallback}",
                 file=sys.stderr,
@@ -381,6 +392,11 @@ def main(argv: list[str] | None = None) -> int:
             fallback_detail["fallback_from"] = selected
             print(json.dumps(fallback_detail, ensure_ascii=False))
             ffmpeg_code, vspipe_code = run_pipeline(fallback_vspipe, fallback_ffmpeg)
+        elif ffmpeg_code != 0 and args.host_managed_encoder_fallback:
+            print(
+                f"framemeld: pipeline failed with {selected}; returning fallback control to host",
+                file=sys.stderr,
+            )
         return ffmpeg_code if ffmpeg_code != 0 else vspipe_code
     except (FileNotFoundError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
         print(f"framemeld: {exc}", file=sys.stderr)
