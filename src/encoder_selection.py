@@ -174,15 +174,18 @@ def encoder_args(encoder: str, quality: int) -> list[str]:
     q = max(0, min(51, int(quality)))
     if encoder in {"h264_nvenc", "hevc_nvenc"}:
         args = ["-c:v", encoder, "-preset", "p6", "-tune", "hq", "-rc", "vbr", "-cq", str(q), "-b:v", "0"]
-        # FFmpeg 9.0 changed h264_nvenc's default profile from Main to High.
-        # Pin Main to preserve the bitstream compatibility of existing outputs.
+        # Platform and social-media delivery favors H.264 High. Pin it instead
+        # of relying on vendor- and FFmpeg-version-specific profile defaults.
         if encoder == "h264_nvenc":
-            args.extend(["-profile:v", "main"])
+            args.extend(["-profile:v", "high"])
         return args
     if encoder in {"h264_qsv", "hevc_qsv"}:
-        return ["-c:v", encoder, "-preset", "slow", "-global_quality", str(max(1, q))]
+        args = ["-c:v", encoder, "-preset", "slow", "-global_quality", str(max(1, q))]
+        if encoder == "h264_qsv":
+            args.extend(["-profile:v", "high"])
+        return args
     if encoder in {"h264_amf", "hevc_amf"}:
-        return [
+        args = [
             "-c:v",
             encoder,
             "-quality",
@@ -194,8 +197,11 @@ def encoder_args(encoder: str, quality: int) -> list[str]:
             "-qp_p",
             str(q),
         ]
+        if encoder == "h264_amf":
+            args.extend(["-profile:v", "high"])
+        return args
     if encoder == "libx264":
-        return ["-c:v", encoder, "-preset", "medium", "-crf", str(q)]
+        return ["-c:v", encoder, "-preset", "medium", "-crf", str(q), "-profile:v", "high"]
     if encoder == "libx265":
         return ["-c:v", encoder, "-preset", "medium", "-crf", str(q)]
     raise ValueError(f"Unsupported encoder: {encoder}")
