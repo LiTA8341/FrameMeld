@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import sys
 from fractions import Fraction
 from pathlib import Path
 
@@ -156,7 +157,10 @@ def interpolate_rife_adaptive(
     source_rate = Fraction(clip.fps_num, clip.fps_den)
     ratio = target / source_rate
     if ratio.denominator != 1 or ratio.numerator < 2:
-        print(f"engine: adaptive RIFE requires an integer multiplier; using full RIFE for {source_rate} -> {target}")
+        print(
+            f"engine: adaptive RIFE requires an integer multiplier; using full RIFE for {source_rate} -> {target}",
+            file=sys.stderr,
+        )
         return interpolate_rife(clip, full_range, target, model_path, gpu_index)
     factor = ratio.numerator
     analysis = low_resolution_luma(clip, performance.analysis_width)
@@ -196,7 +200,8 @@ def interpolate_rife_adaptive(
     print(
         "engine: adaptive RIFE "
         f"factor={factor} motion={performance.adaptive_motion_threshold} "
-        f"scene={performance.adaptive_scene_threshold} analysis={performance.analysis_width}px"
+        f"scene={performance.adaptive_scene_threshold} analysis={performance.analysis_width}px",
+        file=sys.stderr,
     )
     return process_in_format(clip, full_range, vs.RGBS, build)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fractions import Fraction
+import sys
 
 import vapoursynth as vs
 from vapoursynth import core
@@ -46,12 +47,12 @@ def _interpolate(clip: vs.VideoNode, source: SourceSpec, config: EngineConfig) -
     if options.method != "rife" and options.pre_enabled:
         pre_target = target_fps(options.pre_target, current)
         if current < pre_target:
-            print(f"engine: pre-interpolate rife {current} -> {pre_target}")
+            print(f"engine: pre-interpolate rife {current} -> {pre_target}", file=sys.stderr)
             clip = interpolate_rife(clip, source.full_range, pre_target, options.model_path, options.gpu_index)
             current = Fraction(clip.fps_num, clip.fps_den)
     if current >= target:
         return clip
-    print(f"engine: interpolate {options.method} {current} -> {target}")
+    print(f"engine: interpolate {options.method} {current} -> {target}", file=sys.stderr)
     if options.method == "rife":
         if config.performance.mode == "adaptive":
             return interpolate_rife_adaptive(
@@ -78,7 +79,8 @@ def _apply_motion_blur(clip: vs.VideoNode, source: SourceSpec, config: EngineCon
             print(
                 "engine: motion-blur "
                 f"taps={len(weights)} profile={description} "
-                f"amount={options.amount:.4f} weighting={options.weighting}"
+                f"amount={options.amount:.4f} weighting={options.weighting}",
+                file=sys.stderr,
             )
             clip = blend(clip, source.full_range, weights, options.gamma)
     output_rate = Fraction(options.output_fps, 1)
