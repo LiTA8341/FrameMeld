@@ -148,6 +148,13 @@ class EncoderArgumentTests(unittest.TestCase):
                 args = encoder_args(encoder, 18)
                 self.assertEqual(args[:2], ["-c:v", encoder])
 
+    def test_h264_nvenc_profile_is_pinned_for_output_compatibility(self) -> None:
+        h264_args = encoder_args("h264_nvenc", 18)
+        hevc_args = encoder_args("hevc_nvenc", 18)
+
+        self.assertEqual(h264_args[h264_args.index("-profile:v") + 1], "main")
+        self.assertNotIn("-profile:v", hevc_args)
+
 
 if __name__ == "__main__":
     unittest.main()

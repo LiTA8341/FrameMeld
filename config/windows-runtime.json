@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "runtime_name": "framemeld-runtime-git-f2e5eff3ff-engine1",
+  "runtime_name": "framemeld-runtime-ffmpeg-9.0-full-engine1",
   "ffmpeg": {
-    "version": "2026-05-06-git-f2e5eff3ff-full_build",
-    "url": "https://github.com/GyanD/codexffmpeg/releases/download/2026-05-06-git-f2e5eff3ff/ffmpeg-2026-05-06-git-f2e5eff3ff-full_build.zip",
-    "sha256": "001dde67502f576b3db3eed7a104e81984d0e68ed9fa0ae39e05f56d4a4c9996",
-    "archive_root": "ffmpeg-2026-05-06-git-f2e5eff3ff-full_build",
-    "preferred_local_file": "ffmpeg-2026-05-06-git-f2e5eff3ff-full_build.zip"
+    "version": "9.0-full_build",
+    "url": "https://github.com/GyanD/codexffmpeg/releases/download/9.0/ffmpeg-9.0-full_build.7z",
+    "sha256": "13f55932bed5b2c2e5706c91af8081f8e9ed76364f2f682de0ae22679bf26642",
+    "archive_root": "ffmpeg-9.0-full_build",
+    "preferred_local_file": "ffmpeg-9.0-full_build.7z"
   },
   "python": {
     "version": "3.12.10",

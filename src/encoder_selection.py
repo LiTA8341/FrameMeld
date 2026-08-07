@@ -173,7 +173,12 @@ def build_encoder_candidates(requested: str, gpu_vendors: Iterable[GpuVendor]) -
 def encoder_args(encoder: str, quality: int) -> list[str]:
     q = max(0, min(51, int(quality)))
     if encoder in {"h264_nvenc", "hevc_nvenc"}:
-        return ["-c:v", encoder, "-preset", "p6", "-tune", "hq", "-rc", "vbr", "-cq", str(q), "-b:v", "0"]
+        args = ["-c:v", encoder, "-preset", "p6", "-tune", "hq", "-rc", "vbr", "-cq", str(q), "-b:v", "0"]
+        # FFmpeg 9.0 changed h264_nvenc's default profile from Main to High.
+        # Pin Main to preserve the bitstream compatibility of existing outputs.
+        if encoder == "h264_nvenc":
+            args.extend(["-profile:v", "main"])
+        return args
     if encoder in {"h264_qsv", "hevc_qsv"}:
         return ["-c:v", encoder, "-preset", "slow", "-global_quality", str(max(1, q))]
     if encoder in {"h264_amf", "hevc_amf"}:
