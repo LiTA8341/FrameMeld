@@ -16,6 +16,8 @@ CAPABILITIES = {
         "rife",
         "motion-blur",
         "host-managed-encoder-fallback",
+        "structured-status-json-v1",
+        "device-diagnostics-json-v1",
     ],
     "license": "GPL-3.0-only",
 }
@@ -40,6 +42,12 @@ automatic hardware probing with a same-codec software fallback.
 Hosts that already manage encoder retries can pass
 --host-managed-encoder-fallback to receive the first attempt's real exit code
 instead of allowing FrameMeld to retry silently with a software encoder.
+
+Hosts can pass --status-json-lines to receive machine-readable lifecycle,
+device-selection, and failure-domain events on stderr. Each event starts with
+the stable "framemeld-status:" prefix.
+The optional --host-encoder-adapter-json value records the host-planned adapter
+without claiming that a system-default encoder was explicitly bound to it.
 
 Performance modes:
   --performance-mode original   Upstream-compatible full RIFE and deduplication

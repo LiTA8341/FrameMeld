@@ -63,6 +63,23 @@ dist\framemeld-runtime\ffmpeg.exe -framemeld --capabilities-json
 The response identifies protocol `org.framemeld.cli`, API version 1, supported
 features, and the `GPL-3.0-only` license boundary.
 
+Hosts may opt into `structured-status-json-v1` with `--status-json-lines`.
+FrameMeld then emits prefixed JSON lifecycle, frame-progress, selected-device,
+child-return-code, and failure-domain events on stderr. Optional host adapter
+metadata is echoed separately from the runtime's binding status so a planned
+adapter is never reported as an explicitly bound device.
+The device event classifies QSV as a separate Intel branch. QSV and AMF are
+currently reported as `system-default`; NVENC retains its explicit `-gpu`
+binding. Hosts should branch on the selected encoder backend (`*_qsv` or
+`*_amf`), not on a hard-coded GPU model list.
+
+The optional `device-diagnostics-json-v1` records the FFmpeg Vulkan inventory,
+a conservative DXGI-to-RIFE mapping candidate, encoder initialization/binding
+evidence, first-frame and first-output-packet observations, and a final
+performance summary. FFmpeg's Vulkan listing does not currently expose UUID or
+Windows LUID, so mappings without a stable identity are explicitly reported as
+`candidate`, `ambiguous`, `unmatched`, or `unknown` rather than exact.
+
 Use `-c:v h264` or `-c:v h265` for automatic NVIDIA/AMD/Intel hardware probing
 with a same-codec software fallback. Explicit encoder names such as
 `hevc_nvenc`, `hevc_amf`, `hevc_qsv`, and `libx265` remain available.

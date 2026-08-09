@@ -30,6 +30,18 @@ dist\framemeld-runtime\ffmpeg.exe -framemeld --capabilities-json
 dist\framemeld-runtime\ffmpeg.exe -framemeld --help-full
 ```
 
+主程序可以追加 `--status-json-lines`，让 FrameMeld 在 stderr 输出以
+`framemeld-status:` 开头的 JSON 事件。事件包含实际选中的编码器、RIFE GPU
+index、主程序计划的适配器、设备绑定状态、帧进度、子进程退出码和失败域。
+`encoder` 失败可由主程序决定是否回退；`frame_engine`、`ffmpeg_pipeline`、
+`configuration` 和超时不应被记为硬件编码器失败。
+
+`--host-encoder-adapter-json` 只用于回传主程序规划的适配器元数据。如果事件中
+编码器设备仍标记为 `system-default`，就不能把规划设备当成已经确认的实际设备。
+设备事件把 QSV 作为独立的 Intel 分支。当前 QSV 与 AMF 都按
+`system-default` 如实回传，NVENC 则保留显式 `-gpu` 绑定。主程序应按实际选中的
+编码器后端（`*_qsv`/`*_amf`）分支，不要维护 GPU 型号白名单。
+
 ## 性能模式
 
 - `original`：上游兼容的完整 RIFE 补帧与全分辨率重复帧分析。
