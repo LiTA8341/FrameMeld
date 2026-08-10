@@ -63,6 +63,21 @@ dist\framemeld-runtime\ffmpeg.exe -framemeld --capabilities-json
 The response identifies protocol `org.framemeld.cli`, API version 1, supported
 features, and the `GPL-3.0-only` license boundary.
 
+Device-aware hosts can query the bounded Vulkan inventory without starting an
+export:
+
+```powershell
+dist\framemeld-runtime\ffmpeg.exe -framemeld --device-inventory-json
+```
+
+The response deliberately labels FFmpeg Vulkan and RIFE/ncnn Vulkan as
+different index spaces. A host may pass a uniquely matched candidate with
+`--gpu INDEX` and keep its intended RIFE adapter metadata separate in
+`--host-rife-adapter-json`. During an export, `rife_binding` reports the device
+banner actually emitted by ncnn. This runtime observation can validate a
+host-side success cache without claiming that FFmpeg and ncnn enumeration are
+universally identical.
+
 Hosts may opt into `structured-status-json-v1` with `--status-json-lines`.
 FrameMeld then emits prefixed JSON lifecycle, frame-progress, selected-device,
 child-return-code, and failure-domain events on stderr. Optional host adapter

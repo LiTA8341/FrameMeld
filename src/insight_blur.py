@@ -30,6 +30,10 @@ STATUS_VERSION = 1
 _MAX_DIAGNOSTIC_BYTES = 256 * 1024
 _VSPIPE_PROGRESS_RE = re.compile(rb"Frame:\s*(\d+)\s*/\s*(\d+)")
 _VSPIPE_OUTPUT_RE = re.compile(rb"Output\s+(\d+)\s+frames\b", re.IGNORECASE)
+_NCNN_GPU_RE = re.compile(
+    rb"\[(\d+)\s+([^\]\r\n]+)\]\s+(?:queueC|bugs|fp16|subgroup)",
+    re.IGNORECASE,
+)
 _FFMPEG_PROGRESS_PAIR_RE = re.compile(rb"(?:^|[\r\n])([a-z_]+)=([^\r\n]*)")
 _VULKAN_GPU_RE = re.compile(
     r"\]\s*(\d+):\s+(.+?)\s+\(([^()]*)\)\s+\(0x([0-9a-fA-F]+)\)\s*$",
@@ -65,6 +69,7 @@ class PipelineResult:
         first_frame_ms: int | None = None,
         first_packet_ms: int | None = None,
         output_bytes: int = 0,
+        rife_device: dict[str, Any] | None = None,
     ) -> None:
         self.ffmpeg_code = int(ffmpeg_code)
         self.vspipe_code = int(vspipe_code)
@@ -77,6 +82,7 @@ class PipelineResult:
         self.first_frame_ms = None if first_frame_ms is None else max(0, int(first_frame_ms))
         self.first_packet_ms = None if first_packet_ms is None else max(0, int(first_packet_ms))
         self.output_bytes = max(0, int(output_bytes))
+        self.rife_device = dict(rife_device or {})
 
     @property
     def exit_code(self) -> int:
@@ -571,6 +577,7 @@ def build_commands(
         encoder_attempts = []
 
     host_encoder_adapter = parse_host_encoder_adapter(args.host_encoder_adapter_json)
+    host_rife_adapter = parse_host_encoder_adapter(args.host_rife_adapter_json)
     vulkan_inventory = (
         probe_vulkan_inventory(ffmpeg)
         if args.status_json_lines
@@ -631,7 +638,7 @@ def build_commands(
     encoder_device_applied = args.encoder_device is not None and encoder.endswith("_nvenc")
     rife_index = int(settings["rife_gpu_index"])
     device_mapping = map_host_adapter_to_vulkan(
-        host_encoder_adapter,
+        host_rife_adapter,
         vulkan_inventory,
         rife_index,
     )
@@ -644,6 +651,7 @@ def build_commands(
             "rife": {
                 "index": rife_index,
                 "selection": "explicit" if args.gpu is not None else "default",
+                "host_planned_adapter": host_rife_adapter or None,
             },
             "encoder": encoder_device_status(
                 encoder,
@@ -671,6 +679,7 @@ def run_pipeline(
     ffmpeg_command: list[str],
     *,
     status_json_lines: bool = False,
+    rife_device_request: dict[str, Any] | None = None,
 ) -> PipelineResult:
     creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
     vspipe = subprocess.Popen(
@@ -697,6 +706,8 @@ def run_pipeline(
         "total": 0,
         "rolling": b"",
         "ffmpeg_rolling": b"",
+        "rife_rolling": b"",
+        "rife_device": None,
         "first_frame_ms": None,
         "first_packet_ms": None,
         "output_bytes": 0,
@@ -720,6 +731,36 @@ def run_pipeline(
                 _append_diagnostic(target, chunk)
                 _forward_stderr(chunk)
                 if parse_progress:
+                    rife_rolling = (progress_state["rife_rolling"] + chunk)[-8192:]
+                    progress_state["rife_rolling"] = rife_rolling[-512:]
+                    if progress_state["rife_device"] is None:
+                        rife_match = _NCNN_GPU_RE.search(rife_rolling)
+                        if rife_match is not None:
+                            actual_index = int(rife_match.group(1))
+                            actual_name = rife_match.group(2).decode("utf-8", errors="replace").strip()
+                            actual_device = {
+                                "index": actual_index,
+                                "name": actual_name,
+                                "vendor": _gpu_vendor_from_name(actual_name),
+                                "identity_source": "ncnn_vulkan_runtime",
+                            }
+                            progress_state["rife_device"] = actual_device
+                            request = dict(rife_device_request or {})
+                            requested_index = request.get("index")
+                            emit_status(
+                                status_json_lines,
+                                "rife_binding",
+                                status="observed",
+                                requested=request or None,
+                                actual=actual_device,
+                                index_binding_verified=(
+                                    requested_index is None
+                                    or requested_index == actual_index
+                                ),
+                                host_binding_verified=False,
+                                evidence="ncnn_vulkan_runtime_banner",
+                                elapsed_ms=round((time.monotonic() - started) * 1000),
+                            )
                     rolling = (progress_state["rolling"] + chunk)[-8192:]
                     progress_state["rolling"] = rolling[-256:]
                     matches = list(_VSPIPE_PROGRESS_RE.finditer(rolling))
@@ -840,6 +881,7 @@ def run_pipeline(
         first_frame_ms=progress_state["first_frame_ms"],
         first_packet_ms=progress_state["first_packet_ms"],
         output_bytes=int(progress_state["output_bytes"]),
+        rife_device=progress_state["rife_device"],
     )
 
 
@@ -1008,6 +1050,11 @@ def parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional host-planned adapter metadata echoed in structured status events",
     )
+    result.add_argument(
+        "--host-rife-adapter-json",
+        default=None,
+        help="Optional host-planned RIFE adapter metadata kept separate from encoder selection",
+    )
     result.add_argument("--audio-codec", choices=("aac", "copy"), default="aac")
     result.add_argument("--audio-bitrate", default="320k")
     result.add_argument("--loglevel", default="error")
@@ -1047,6 +1094,7 @@ def main(argv: list[str] | None = None) -> int:
             vspipe_command,
             ffmpeg_command,
             status_json_lines=args.status_json_lines,
+            rife_device_request=(detail.get("devices") or {}).get("rife"),
         )
         emit_post_pipeline_diagnostics(args.status_json_lines, detail, result)
         if result.exit_code == 0:
@@ -1113,6 +1161,7 @@ def main(argv: list[str] | None = None) -> int:
                 fallback_vspipe,
                 fallback_ffmpeg,
                 status_json_lines=args.status_json_lines,
+                rife_device_request=(fallback_detail.get("devices") or {}).get("rife"),
             )
             emit_post_pipeline_diagnostics(args.status_json_lines, fallback_detail, result)
             fallback_domain = None if result.exit_code == 0 else failure_domain(
@@ -1154,6 +1203,10 @@ def main(argv: list[str] | None = None) -> int:
             host_adapter = parse_host_encoder_adapter(args.host_encoder_adapter_json)
         except (ValueError, json.JSONDecodeError):
             host_adapter = {}
+        try:
+            host_rife_adapter = parse_host_encoder_adapter(args.host_rife_adapter_json)
+        except (ValueError, json.JSONDecodeError):
+            host_rife_adapter = {}
         failed_encoder = exc.encoder if isinstance(exc, EncoderPreflightFailure) else ""
         emit_status(
             args.status_json_lines,
@@ -1186,6 +1239,7 @@ def main(argv: list[str] | None = None) -> int:
                 "rife": {
                     "index": max(0, int(args.gpu or 0)),
                     "selection": "explicit" if args.gpu is not None else "default",
+                    "host_planned_adapter": host_rife_adapter or None,
                 },
                 "encoder": encoder_device_status(
                     failed_encoder,

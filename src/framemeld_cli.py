@@ -18,6 +18,9 @@ CAPABILITIES = {
         "host-managed-encoder-fallback",
         "structured-status-json-v1",
         "device-diagnostics-json-v1",
+        "device-inventory-json-v1",
+        "rife-gpu-selection-v1",
+        "rife-binding-json-v1",
     ],
     "license": "GPL-3.0-only",
 }
@@ -35,8 +38,9 @@ Examples:
   ffmpeg.exe -framemeld -i input.mp4 --config settings.json -c:v h265 -cq 18 output-hevc.mp4
 
 The standard FFmpeg options -y, -hide_banner, -loglevel, -c:v, -cq/-crf,
--c:a, -b:a and the NVENC -gpu selector are accepted. Run with --help-full
-to list all processing options. Use -c:v h264 or -c:v h265 for cross-vendor
+-c:a, -b:a and the NVENC -gpu selector are accepted. FrameMeld's separate
+--gpu selector chooses the RIFE/ncnn Vulkan device. Run with --help-full to
+list all processing options. Use -c:v h264 or -c:v h265 for cross-vendor
 automatic hardware probing with a same-codec software fallback.
 
 Hosts that already manage encoder retries can pass
@@ -48,6 +52,8 @@ device-selection, and failure-domain events on stderr. Each event starts with
 the stable "framemeld-status:" prefix.
 The optional --host-encoder-adapter-json value records the host-planned adapter
 without claiming that a system-default encoder was explicitly bound to it.
+The independent --host-rife-adapter-json value records the adapter that the
+host wants RIFE to use; it never changes encoder selection.
 
 Performance modes:
   --performance-mode original   Upstream-compatible full RIFE and deduplication
@@ -63,6 +69,24 @@ does not round the source timeline. Explicit --blur-amount always wins.
 
 def capabilities_json() -> str:
     return json.dumps(CAPABILITIES, separators=(",", ":"), sort_keys=True)
+
+
+def device_inventory_json() -> str:
+    ffmpeg = insight_blur.runtime_root() / "lib" / "ffmpeg" / "ffmpeg-core.exe"
+    inventory = insight_blur.probe_vulkan_inventory(ffmpeg)
+    return json.dumps(
+        {
+            "protocol": "org.framemeld.devices",
+            "version": 1,
+            "index_space": "ffmpeg_vulkan",
+            "rife_index_space": "ncnn_vulkan",
+            "index_spaces_verified_equal": False,
+            "inventory": inventory,
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
 
 
 def translate(argv: list[str]) -> list[str]:
@@ -119,6 +143,9 @@ def main(argv: list[str] | None = None) -> int:
     arguments = sys.argv[1:] if argv is None else argv
     if arguments == ["--capabilities-json"]:
         print(capabilities_json())
+        return 0
+    if arguments == ["--device-inventory-json"]:
+        print(device_inventory_json())
         return 0
     try:
         return insight_blur.main(translate(arguments))

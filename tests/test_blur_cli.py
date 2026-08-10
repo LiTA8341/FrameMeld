@@ -28,6 +28,20 @@ class FfmpegCliTranslationTests(unittest.TestCase):
         self.assertIn("host-managed-encoder-fallback", capabilities["features"])
         self.assertIn("structured-status-json-v1", capabilities["features"])
         self.assertIn("device-diagnostics-json-v1", capabilities["features"])
+        self.assertIn("device-inventory-json-v1", capabilities["features"])
+        self.assertIn("rife-gpu-selection-v1", capabilities["features"])
+        self.assertIn("rife-binding-json-v1", capabilities["features"])
+
+    def test_device_inventory_endpoint_keeps_index_spaces_distinct(self) -> None:
+        inventory = {"status": "succeeded", "devices": [{"index": 1, "name": "GPU"}]}
+        with patch.object(insight_blur, "probe_vulkan_inventory", return_value=inventory):
+            payload = json.loads(framemeld_cli.device_inventory_json())
+
+        self.assertEqual(payload["protocol"], "org.framemeld.devices")
+        self.assertEqual(payload["inventory"], inventory)
+        self.assertEqual(payload["index_space"], "ffmpeg_vulkan")
+        self.assertEqual(payload["rife_index_space"], "ncnn_vulkan")
+        self.assertFalse(payload["index_spaces_verified_equal"])
 
     def test_h265_alias_is_forwarded_to_encoder_planner(self) -> None:
         translated = framemeld_cli.translate(
@@ -78,6 +92,34 @@ class FfmpegCliTranslationTests(unittest.TestCase):
         self.assertEqual(
             translated,
             ["input.mp4", "output.mp4", "--status-json-lines"],
+        )
+
+    def test_rife_adapter_metadata_and_gpu_are_independent_from_encoder_device(self) -> None:
+        translated = framemeld_cli.translate(
+            [
+                "-i",
+                "input.mp4",
+                "--gpu",
+                "1",
+                "--host-rife-adapter-json",
+                '{"vendor":"nvidia"}',
+                "-c:v",
+                "libx264",
+                "output.mp4",
+            ]
+        )
+        self.assertEqual(
+            translated,
+            [
+                "input.mp4",
+                "output.mp4",
+                "--gpu",
+                "1",
+                "--host-rife-adapter-json",
+                '{"vendor":"nvidia"}',
+                "--encoder",
+                "libx264",
+            ],
         )
 
     def test_intel_qsv_device_status_is_an_independent_unbound_branch(self) -> None:
@@ -475,6 +517,45 @@ class UnicodeRuntimePathTests(unittest.TestCase):
         self.assertEqual(result.output_bytes, 4096)
         self.assertTrue(any(event.get("event") == "first_frame" for event in events))
         self.assertTrue(any(event.get("event") == "first_packet" for event in events))
+
+    def test_ncnn_runtime_device_is_reported_separately_from_requested_index(self) -> None:
+        vspipe_process = Mock(
+            stdout=Mock(),
+            stderr=io.BytesIO(
+                b"[1 NVIDIA GeForce RTX 4050 Laptop GPU]  queueC=1[2]  queueG=0[1]\n"
+                b"Frame: 1/1\r"
+            ),
+        )
+        vspipe_process.wait.return_value = 0
+        vspipe_process.poll.return_value = 0
+        ffmpeg_process = Mock(stderr=io.BytesIO(b""))
+        ffmpeg_process.wait.return_value = 0
+
+        with (
+            patch.object(
+                insight_blur.subprocess,
+                "Popen",
+                side_effect=[vspipe_process, ffmpeg_process],
+            ),
+            patch("sys.stderr", new_callable=io.StringIO) as stderr,
+        ):
+            result = insight_blur.run_pipeline(
+                ["vspipe"],
+                ["ffmpeg"],
+                status_json_lines=True,
+                rife_device_request={"index": 1, "selection": "explicit"},
+            )
+
+        events = [
+            json.loads(line.removeprefix(insight_blur.STATUS_PREFIX))
+            for line in stderr.getvalue().replace("\r", "\n").splitlines()
+            if line.startswith(insight_blur.STATUS_PREFIX)
+        ]
+        binding = next(event for event in events if event.get("event") == "rife_binding")
+        self.assertEqual(binding["actual"]["index"], 1)
+        self.assertEqual(binding["actual"]["vendor"], "nvidia")
+        self.assertTrue(binding["index_binding_verified"])
+        self.assertEqual(result.rife_device["name"], "NVIDIA GeForce RTX 4050 Laptop GPU")
 
 
 if __name__ == "__main__":

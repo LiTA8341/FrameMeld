@@ -27,8 +27,11 @@ dist\framemeld-runtime\ffmpeg.exe -framemeld `
 
 ```powershell
 dist\framemeld-runtime\ffmpeg.exe -framemeld --capabilities-json
+dist\framemeld-runtime\ffmpeg.exe -framemeld --device-inventory-json
 dist\framemeld-runtime\ffmpeg.exe -framemeld --help-full
 ```
+
+`--device-inventory-json` 只查询有界的 Vulkan 设备清单，不启动正式导出。返回值会明确区分 FFmpeg Vulkan 与 RIFE/ncnn Vulkan 两个索引空间，不会假定它们天然一一对应。主程序只能在厂商、device id 或名称得到唯一候选时传入 `--gpu INDEX`，并通过独立的 `--host-rife-adapter-json` 回传计划使用的 RIFE 适配器。正式运行后，`rife_binding` 会记录 ncnn 实际打印的设备索引和名称；主程序可以据此保存“成功映射缓存”，但不能把未经运行验证的候选写成精确绑定。
 
 主程序可以追加 `--status-json-lines`，让 FrameMeld 在 stderr 输出以
 `framemeld-status:` 开头的 JSON 事件。事件包含实际选中的编码器、RIFE GPU
