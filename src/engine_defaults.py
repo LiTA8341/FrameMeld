@@ -9,6 +9,10 @@ from pathlib import Path
 from typing import Any
 
 
+BUILD_FLAVOR = "fast"
+POLICY_ID = "source-relative-fast-v1"
+
+
 DEFAULT_SETTINGS: dict[str, Any] = {
     "blur": True,
     "blur_amount": 1.0,
@@ -71,52 +75,65 @@ WEIGHTINGS = {
 }
 
 
-# These source-rate families have been checked with real exported footage.
-# Most retain an exact source-relative multiplier.  The approved 144/180fps
-# paths instead target 360fps so the final 60fps blend has an exact 6:1
-# timeline; their reported source rate is still preserved for RIFE timing.
+# Fast keeps the public balanced/adaptive interface while lowering the RIFE
+# timeline one tier.  Multipliers are applied to the exact reported rational
+# rate, so NTSC-family sources keep their original timing.
 VERIFIED_FRAME_RATE_PROFILES: tuple[dict[str, Any], ...] = (
     {
-        "name": "verified-60fps",
+        "name": "fast-60fps",
         "nominal_fps": Fraction(60, 1),
-        "multiplier": 5,
-        "blur_amount": 1.0,
-        "blur_taps": 5,
-    },
-    {
-        "name": "verified-90fps",
-        "nominal_fps": Fraction(90, 1),
         "multiplier": 4,
         "blur_amount": 1.0,
-        "blur_taps": 7,
+        "blur_taps": 5,
+        "status": "subjectively-confirmed",
     },
     {
-        "name": "verified-120fps",
-        "nominal_fps": Fraction(120, 1),
+        "name": "fast-90fps",
+        "nominal_fps": Fraction(90, 1),
         "multiplier": 3,
+        "blur_amount": 1.0,
+        "blur_taps": 0,
+        "status": "candidate",
+    },
+    {
+        "name": "fast-120fps",
+        "nominal_fps": Fraction(120, 1),
+        "multiplier": 2,
         "blur_amount": 0.85,
         "blur_taps": 0,
+        "status": "candidate",
     },
     {
-        "name": "verified-144fps",
+        "name": "fast-144fps",
         "nominal_fps": Fraction(144, 1),
-        "target_fps": Fraction(360, 1),
+        "multiplier": 2,
         "blur_amount": 0.925,
         "blur_taps": 0,
+        "status": "candidate",
     },
     {
-        "name": "verified-180fps",
+        "name": "fast-180fps",
         "nominal_fps": Fraction(180, 1),
-        "target_fps": Fraction(360, 1),
+        "multiplier": 2,
         "blur_amount": 0.925,
         "blur_taps": 0,
+        "status": "existing-quality-profile",
     },
     {
-        "name": "verified-360fps",
+        "name": "fast-240fps",
+        "nominal_fps": Fraction(240, 1),
+        "multiplier": 1,
+        "blur_amount": 1.0,
+        "blur_taps": 0,
+        "status": "candidate",
+    },
+    {
+        "name": "fast-360fps",
         "nominal_fps": Fraction(360, 1),
         "multiplier": 1,
         "blur_amount": 1.0,
         "blur_taps": 7,
+        "status": "existing-quality-profile",
     },
 )
 
@@ -228,12 +245,11 @@ def apply_performance_policy(
 
     Automatic balanced/adaptive policy:
 
-    * approved 60/90/120/144/180/360fps families use their verified profiles;
+    * approved 60/90/120/144/180/240/360fps families use the Fast table;
     * other sources below 56fps use the smallest integer multiplier that
       reaches 200fps, then use the approved 60fps five-tap blur strategy;
-    * other sources from 56fps through below 300fps use the smallest integer
-      multiplier that reaches 300fps;
-    * 300fps and above: keep the native rate and skip main interpolation.
+    * other sources from 56fps through below 240fps target exactly 240fps;
+    * 240fps and above: keep the native rate and skip main interpolation.
 
     An explicit target remains the highest-priority user choice. Exact mode
     preserves the configured Blur target. Explicit ``--performance-samples``
@@ -266,7 +282,7 @@ def apply_performance_policy(
         elif source_fps is not None:
             if source_fps <= 0:
                 raise ValueError("source_fps must be positive")
-            minimum_target = 200 if source_fps < 56 else (300 if source_fps < 300 else None)
+            minimum_target = 200 if source_fps < 56 else (240 if source_fps < 240 else None)
             if profile is not None:
                 if "target_fps" in profile:
                     target = Fraction(profile["target_fps"])
@@ -280,12 +296,21 @@ def apply_performance_policy(
                     multiplier = int(profile["multiplier"])
                     effective_ratio = Fraction(multiplier, 1)
                     target = source_fps * int(multiplier)
-                policy = "verified-frame-rate-profile"
-            elif source_fps >= 300:
+                policy = "fast-frame-rate-profile"
+            elif source_fps >= 240:
                 multiplier = 1
                 effective_ratio = Fraction(1, 1)
                 target = source_fps
                 policy = "auto-native-rate"
+            elif source_fps >= 56:
+                target = Fraction(240, 1)
+                effective_ratio = target / source_fps
+                multiplier = (
+                    effective_ratio.numerator
+                    if effective_ratio.denominator == 1
+                    else float(effective_ratio)
+                )
+                policy = "auto-fast-target"
             else:
                 multiplier = max(1, ceil(Fraction(minimum_target, 1) / source_fps))
                 effective_ratio = Fraction(multiplier, 1)
@@ -304,11 +329,11 @@ def apply_performance_policy(
         settings["blur_amount"] = float(profile["blur_amount"])
         settings["blur_taps"] = int(profile["blur_taps"])
         blur_profile = str(profile["name"])
-        blur_taps_policy = "verified-frame-rate-profile"
+        blur_taps_policy = "fast-frame-rate-profile"
         blur_amount_policy = (
             "auto-120fps-continuous"
-            if profile["name"] == "verified-120fps"
-            else "verified-frame-rate-profile"
+            if profile["name"] == "fast-120fps"
+            else "fast-frame-rate-profile"
         )
     elif (
         mode in {"balanced", "adaptive"}
@@ -318,15 +343,17 @@ def apply_performance_policy(
     ):
         settings["blur_amount"] = 1.0
         settings["blur_taps"] = 5
-        blur_profile = "verified-60fps-blur"
-        blur_amount_policy = "verified-60fps-blur"
-        blur_taps_policy = "verified-60fps-blur"
+        blur_profile = "fast-60fps-blur"
+        blur_amount_policy = "fast-60fps-blur"
+        blur_taps_policy = "fast-60fps-blur"
     validate_settings(settings)
     return {
         "mode": mode,
+        "build_flavor": BUILD_FLAVOR,
+        "policy_id": POLICY_ID,
         "policy": policy,
         "profile": profile["name"] if profile is not None else None,
-        "profile_status": "subjectively-confirmed" if profile is not None else None,
+        "profile_status": profile.get("status") if profile is not None else None,
         "source_fps": str(source_fps) if source_fps is not None else None,
         "minimum_target": minimum_target,
         "multiplier": multiplier,

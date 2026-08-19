@@ -226,6 +226,76 @@ def change_fps(clip: vs.VideoNode, target: Fraction) -> vs.VideoNode:
     return core.std.FrameEval(template, eval=select_frame)
 
 
+def linear_resample_phase_plan(
+    source: Fraction,
+    target: Fraction,
+) -> tuple[tuple[int, Fraction], ...]:
+    """Return exact lower-frame offsets and mixes for one cadence period."""
+
+    if source <= 0 or target <= 0:
+        raise EngineError("frame rates must be positive")
+    ratio = source / target
+    return tuple(
+        (
+            math.floor(Fraction(phase * ratio.numerator, ratio.denominator)),
+            Fraction(phase * ratio.numerator, ratio.denominator) % 1,
+        )
+        for phase in range(ratio.denominator)
+    )
+
+
+def change_fps_phase_aware(clip: vs.VideoNode, target: Fraction) -> vs.VideoNode:
+    """Downsample at exact output times and blend adjacent timeline samples.
+
+    Short rational cadences are built as periodic SelectEvery graphs.  Exact
+    fractional rates with a long period (for example 270000/1001 -> 60) use a
+    FrameEval fallback so the graph does not contain hundreds of phase clips.
+    """
+
+    source = Fraction(clip.fps_num, clip.fps_den)
+    if source <= target or (source / target).denominator == 1:
+        return change_fps(clip, target)
+    ratio = source / target
+    phases = linear_resample_phase_plan(source, target)
+    output_length = math.floor(len(clip) * target / source)
+
+    if len(phases) <= 16:
+        following = clip[1:] + clip[-1]
+        phase_clips: list[vs.VideoNode] = []
+        for offset, mix in phases:
+            lower = core.std.SelectEvery(clip, cycle=ratio.numerator, offsets=offset)
+            if mix:
+                upper = core.std.SelectEvery(following, cycle=ratio.numerator, offsets=offset)
+                lower = core.std.Merge(lower, upper, weight=float(mix))
+            phase_clips.append(lower)
+        result = core.std.Interleave(phase_clips, extend=True)[:output_length]
+        return core.std.AssumeFPS(
+            result,
+            fpsnum=target.numerator,
+            fpsden=target.denominator,
+        )
+
+    factor = source / target
+
+    def select_frame(n: int) -> vs.VideoNode:
+        position = n * factor
+        lower_index = min(len(clip) - 1, math.floor(position))
+        upper_index = min(len(clip) - 1, lower_index + 1)
+        mix = position % 1
+        lower = clip[lower_index] * (output_length + 1)
+        if not mix or lower_index == upper_index:
+            return lower
+        upper = clip[upper_index] * (output_length + 1)
+        return core.std.Merge(lower, upper, weight=float(mix))
+
+    template = clip.std.BlankClip(
+        length=output_length,
+        fpsnum=target.numerator,
+        fpsden=target.denominator,
+    )
+    return core.std.FrameEval(template, eval=select_frame)
+
+
 def change_fps_original(clip: vs.VideoNode, target: Fraction) -> vs.VideoNode:
     """Reproduce upstream Blur's FrameEval-based ChangeFPS graph exactly.
 

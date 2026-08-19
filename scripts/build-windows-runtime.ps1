@@ -248,7 +248,13 @@ try {
     & $launcher -framemeld --help | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "The FrameMeld command route is unavailable." }
     $capabilities = & $launcher -framemeld --capabilities-json | ConvertFrom-Json
-    if ($LASTEXITCODE -ne 0 -or $capabilities.protocol -ne "org.framemeld.cli" -or $capabilities.api_version -ne 1) {
+    if (
+        $LASTEXITCODE -ne 0 -or
+        $capabilities.protocol -ne "org.framemeld.cli" -or
+        $capabilities.api_version -ne 1 -or
+        $capabilities.build_flavor -ne $Manifest.distribution.build_flavor -or
+        $capabilities.policy_id -ne $Manifest.distribution.policy_id
+    ) {
         throw "The FrameMeld capability protocol is unavailable."
     }
     & $launcher -blur --help | Out-Null

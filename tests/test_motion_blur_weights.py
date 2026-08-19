@@ -11,6 +11,7 @@ if str(ENGINE_SRC) not in sys.path:
     sys.path.insert(0, str(ENGINE_SRC))
 
 from insight_engine.config import MotionBlurConfig  # noqa: E402
+from insight_engine.interpolation import linear_resample_phase_plan  # noqa: E402
 from insight_engine.motion_blur import make_motion_blur_weights, nearest_frame_gap  # noqa: E402
 
 
@@ -28,6 +29,24 @@ def config(amount: float) -> MotionBlurConfig:
 
 
 class ContinuousMotionBlurWeightTests(unittest.TestCase):
+    def test_270_to_60_uses_two_exact_sampling_phases(self) -> None:
+        self.assertEqual(
+            linear_resample_phase_plan(Fraction(270, 1), Fraction(60, 1)),
+            ((0, Fraction(0, 1)), (4, Fraction(1, 2))),
+        )
+
+    def test_288_to_60_uses_five_exact_sampling_phases(self) -> None:
+        self.assertEqual(
+            linear_resample_phase_plan(Fraction(288, 1), Fraction(60, 1)),
+            (
+                (0, Fraction(0, 1)),
+                (4, Fraction(4, 5)),
+                (9, Fraction(3, 5)),
+                (14, Fraction(2, 5)),
+                (19, Fraction(1, 5)),
+            ),
+        )
+
     def test_profile_can_force_centered_five_taps(self) -> None:
         options = config(1.0)
         object.__setattr__(options, "sample_count", 5)

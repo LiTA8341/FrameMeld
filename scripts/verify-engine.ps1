@@ -14,9 +14,15 @@ $work = Join-Path $RepoRoot ".cache\engine-validation"
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 
 $normalInput = Join-Path $work "normal-640x360-60.mp4"
+$fast90Input = Join-Path $work "fast-640x360-90.mp4"
+$fast144Input = Join-Path $work "fast-640x360-144.mp4"
 $duplicateInput = Join-Path $work "duplicate-640x360-60.mp4"
 & $ffmpeg -y -hide_banner -loglevel error -f lavfi -i "testsrc2=size=640x360:rate=60" -t $Seconds -c:v libx264 -preset ultrafast -qp 0 $normalInput
 if ($LASTEXITCODE -ne 0) { throw "Could not create the normal validation input." }
+& $ffmpeg -y -hide_banner -loglevel error -f lavfi -i "testsrc2=size=640x360:rate=90" -t $Seconds -c:v libx264 -preset ultrafast -qp 0 $fast90Input
+if ($LASTEXITCODE -ne 0) { throw "Could not create the 90 FPS Fast validation input." }
+& $ffmpeg -y -hide_banner -loglevel error -f lavfi -i "testsrc2=size=640x360:rate=144" -t $Seconds -c:v libx264 -preset ultrafast -qp 0 $fast144Input
+if ($LASTEXITCODE -ne 0) { throw "Could not create the 144 FPS Fast validation input." }
 & $ffmpeg -y -hide_banner -loglevel error -f lavfi -i "testsrc2=size=640x360:rate=30" -vf fps=60 -t $Seconds -c:v libx264 -preset ultrafast -qp 0 $duplicateInput
 if ($LASTEXITCODE -ne 0) { throw "Could not create the duplicate-frame validation input." }
 
@@ -45,8 +51,10 @@ function Invoke-EngineCase {
 
 Invoke-EngineCase "rife-interpolation" $normalInput "120/1" @("--interpolate-fps", "120", "--no-blur", "--no-deduplicate")
 Invoke-EngineCase "rife-motion-blur" $normalInput "60/1" @("--interpolate-fps", "120", "--blur-output-fps", "60", "--no-deduplicate")
-Invoke-EngineCase "rife-balanced-policy" $normalInput "300/1" @("--performance-mode", "balanced", "--no-blur", "--no-deduplicate")
-Invoke-EngineCase "rife-adaptive-policy" $normalInput "300/1" @("--performance-mode", "adaptive", "--no-blur", "--no-deduplicate")
+Invoke-EngineCase "rife-balanced-policy" $normalInput "240/1" @("--performance-mode", "balanced", "--no-blur", "--no-deduplicate")
+Invoke-EngineCase "rife-adaptive-policy" $normalInput "240/1" @("--performance-mode", "adaptive", "--no-blur", "--no-deduplicate")
+Invoke-EngineCase "rife-fast-90-phase" $fast90Input "60/1" @("--performance-mode", "balanced", "--blur-output-fps", "60", "--no-deduplicate")
+Invoke-EngineCase "rife-fast-144-phase" $fast144Input "60/1" @("--performance-mode", "balanced", "--blur-output-fps", "60", "--no-deduplicate")
 Invoke-EngineCase "svp-interpolation" $normalInput "120/1" @("--interpolate-fps", "120", "--interpolation-method", "svp", "--no-blur", "--no-deduplicate")
 foreach ($method in @("old", "svp", "rife")) {
     Invoke-EngineCase "deduplicate-$method" $duplicateInput "60/1" @("--no-interpolate", "--no-blur", "--deduplicate-method", $method)

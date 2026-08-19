@@ -103,22 +103,31 @@ platform and social-media delivery; HEVC paths retain their Main defaults.
 
 ## Automatic frame-rate policy
 
+This branch builds the separately distributed **FrameMeld Fast** runtime
+(`build_flavor=fast`, `policy_id=source-relative-fast-v1`). It keeps the same
+CLI/API as the normal runtime, so a host that already passes
+`--performance-mode balanced` does not need a code change. Replace the entire
+FrameMeld runtime directory when switching editions; do not copy only
+`ffmpeg.exe`, because the policy and frame engine live under `tools/` and
+`lib/`.
+
 Explicit `--interpolate-fps`, `--blur-amount`, and sample settings always win.
-Otherwise `balanced` and `adaptive` select the verified source family within a
+Otherwise `balanced` and `adaptive` select the Fast source family within a
 ±0.5 FPS recognition tolerance while retaining the source's exact rational
-rate:
+rate. Fractional downsample cadences such as 270→60 and 288→60 are sampled at
+their exact output times rather than being floored to an earlier frame:
 
 | Input family | Intermediate timeline | Motion-blur profile |
 | ---: | ---: | --- |
 | below 56 FPS | Smallest integer multiple reaching at least 200 FPS | 60 FPS profile: centered 5-tap Vegas, amount 1.0 |
-| 60 FPS | source × 5 | centered 5-tap Vegas, amount 1.0 |
-| 90 FPS | source × 4 | centered 5-tap Vegas, amount 1.0 |
-| 120 FPS | source × 3 | continuous 5-to-7-tap mix, amount 0.85 |
-| 144 FPS | fixed 360 FPS | continuous 5-to-7-tap mix, amount 0.925 |
+| 60 FPS | source × 4 (240 FPS) | centered 5-tap Vegas, amount 1.0 |
+| 90 FPS | source × 3 (270 FPS) | centered 5-tap Vegas, amount 1.0 |
+| 120 FPS | source × 2 (240 FPS) | centered 3-tap Vegas, amount 0.85 |
+| 144 FPS | source × 2 (288 FPS) | centered 5-tap Vegas, amount 0.925 |
 | 180 FPS | fixed 360 FPS | continuous 5-to-7-tap mix, amount 0.925 |
-| 240 FPS | source × 2 (480 FPS) | centered profile, amount 1.0 |
-| other 56 to below 300 FPS | Smallest integer multiple reaching at least 300 FPS | centered profile, amount 1.0 |
-| 300 FPS and above | native timeline; bypass main RIFE interpolation | centered profile, amount 1.0 |
+| 240 FPS | native timeline | centered 5-tap Vegas, amount 1.0 |
+| other 56 to below 240 FPS | exact 240 FPS target | centered profile, amount 1.0 |
+| 240 FPS and above | native timeline; bypass main RIFE interpolation | centered profile, amount 1.0 |
 
 `adaptive` uses the same output timeline but skips RIFE inference for
 deterministically detected near-static frame pairs. `exact` preserves the

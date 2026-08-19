@@ -1,6 +1,12 @@
 {
   "schema_version": 1,
-  "runtime_name": "framemeld-runtime-ffmpeg-9.0-full-engine2",
+  "runtime_name": "framemeld-fast-runtime-ffmpeg-9.0-full-engine2",
+  "distribution": {
+    "name": "FrameMeld Fast",
+    "release": "V0.1.4-fast.1",
+    "build_flavor": "fast",
+    "policy_id": "source-relative-fast-v1"
+  },
   "ffmpeg": {
     "version": "9.0-full_build",
     "url": "https://github.com/GyanD/codexffmpeg/releases/download/9.0/ffmpeg-9.0-full_build.7z",

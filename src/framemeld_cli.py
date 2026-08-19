@@ -6,13 +6,18 @@ import json
 import sys
 
 import insight_blur
+from engine_defaults import BUILD_FLAVOR, POLICY_ID
 
 
 CAPABILITIES = {
     "protocol": "org.framemeld.cli",
     "api_version": 1,
+    "build_flavor": BUILD_FLAVOR,
+    "policy_id": POLICY_ID,
     "features": [
         "auto-profile",
+        "source-relative-fast-policy-v1",
+        "phase-aware-downsample-v1",
         "rife",
         "motion-blur",
         "host-managed-encoder-fallback",
@@ -58,12 +63,12 @@ host wants RIFE to use; it never changes encoder selection.
 Performance modes:
   --performance-mode original   Upstream-compatible full RIFE and deduplication
   --performance-mode exact      Preserve the configured interpolation target
-  --performance-mode balanced   Use verified source-aware profiles (default)
+  --performance-mode balanced   Use the Fast source-relative policy (default)
   --performance-mode adaptive   Skip RIFE only on deterministic near-static pairs
 
-Balanced/adaptive use explicit settings first, then verified frame-rate
-profiles, then the generic integer-multiple fallback. The recognition tolerance
-does not round the source timeline. Explicit --blur-amount always wins.
+Balanced/adaptive use explicit settings first, then the Fast frame-rate table,
+then the generic 240 FPS target. The recognition tolerance does not round the
+source timeline. Explicit --blur-amount always wins.
 """
 
 

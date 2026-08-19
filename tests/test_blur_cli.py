@@ -24,6 +24,8 @@ class FfmpegCliTranslationTests(unittest.TestCase):
         self.assertEqual(capabilities["protocol"], "org.framemeld.cli")
         self.assertEqual(capabilities["api_version"], 1)
         self.assertEqual(capabilities["license"], "GPL-3.0-only")
+        self.assertEqual(capabilities["build_flavor"], "fast")
+        self.assertEqual(capabilities["policy_id"], "source-relative-fast-v1")
         self.assertIn("motion-blur", capabilities["features"])
         self.assertIn("host-managed-encoder-fallback", capabilities["features"])
         self.assertIn("structured-status-json-v1", capabilities["features"])
@@ -31,6 +33,8 @@ class FfmpegCliTranslationTests(unittest.TestCase):
         self.assertIn("device-inventory-json-v1", capabilities["features"])
         self.assertIn("rife-gpu-selection-v1", capabilities["features"])
         self.assertIn("rife-binding-json-v1", capabilities["features"])
+        self.assertIn("source-relative-fast-policy-v1", capabilities["features"])
+        self.assertIn("phase-aware-downsample-v1", capabilities["features"])
 
     def test_device_inventory_endpoint_keeps_index_spaces_distinct(self) -> None:
         inventory = {"status": "succeeded", "devices": [{"index": 1, "name": "GPU"}]}

@@ -12,6 +12,7 @@ from .formats import process_in_format, scale_fps
 from .interpolation import (
     change_fps,
     change_fps_original,
+    change_fps_phase_aware,
     interpolate_rife,
     interpolate_rife_adaptive,
     interpolate_svp,
@@ -86,6 +87,19 @@ def _apply_motion_blur(clip: vs.VideoNode, source: SourceSpec, config: EngineCon
     output_rate = Fraction(options.output_fps, 1)
     if config.performance.mode == "original":
         return change_fps_original(clip, output_rate)
+    source_rate = Fraction(clip.fps_num, clip.fps_den)
+    if (
+        config.performance.mode in {"balanced", "adaptive"}
+        and options.amount > 0
+        and source_rate > output_rate
+        and (source_rate / output_rate).denominator != 1
+    ):
+        print(
+            "engine: phase-aware downsample "
+            f"{source_rate} -> {output_rate} period={(source_rate / output_rate).denominator}",
+            file=sys.stderr,
+        )
+        return change_fps_phase_aware(clip, output_rate)
     return change_fps(clip, output_rate)
 
 

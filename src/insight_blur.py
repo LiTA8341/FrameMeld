@@ -21,7 +21,7 @@ from encoder_selection import (
     is_hardware_encoder,
     select_encoder,
 )
-from engine_defaults import apply_performance_policy, merge_settings
+from engine_defaults import BUILD_FLAVOR, POLICY_ID, apply_performance_policy, merge_settings
 
 
 STATUS_PREFIX = "framemeld-status:"
@@ -1089,6 +1089,9 @@ def main(argv: list[str] | None = None) -> int:
             devices=detail.get("devices"),
             engine=detail.get("engine"),
             interpolation=detail.get("interpolation"),
+            performance=detail.get("performance"),
+            build_flavor=BUILD_FLAVOR,
+            policy_id=POLICY_ID,
         )
         result = run_pipeline(
             vspipe_command,
@@ -1156,6 +1159,9 @@ def main(argv: list[str] | None = None) -> int:
                 encoder=fallback_detail.get("encoder"),
                 devices=fallback_detail.get("devices"),
                 fallback_from=selected,
+                performance=fallback_detail.get("performance"),
+                build_flavor=BUILD_FLAVOR,
+                policy_id=POLICY_ID,
             )
             result = run_pipeline(
                 fallback_vspipe,
