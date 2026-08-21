@@ -101,6 +101,12 @@ with a same-codec software fallback. Explicit encoder names such as
 All H.264 paths explicitly emit High Profile with 8-bit YUV 4:2:0 for video
 platform and social-media delivery; HEVC paths retain their Main defaults.
 
+The optional `--final-sharpen AMOUNT` filter applies a 3×3 luma-only unsharp
+pass during the final encode, after interpolation and motion-blur blending.
+Use `--final-sharpen 0.15` for the tested light profile, `0` to disable it, or
+another value from `0` through `1.5` for a host-controlled override. The CLI
+default remains `0` for compatibility with existing standalone callers.
+
 ## Automatic frame-rate policy
 
 This branch builds the separately distributed **FrameMeld Fast** runtime

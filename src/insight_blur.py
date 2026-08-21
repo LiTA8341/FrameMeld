@@ -470,6 +470,9 @@ def build_commands(
         raise FileNotFoundError(f"Input does not exist: {source}")
     if source == output:
         raise ValueError("Input and output paths must differ")
+    final_sharpen = float(args.final_sharpen)
+    if final_sharpen < 0 or final_sharpen > 1.5:
+        raise ValueError("final_sharpen must be between 0 and 1.5")
     output.parent.mkdir(parents=True, exist_ok=True)
     info = probe_video(ffprobe, source)
     overrides: dict[str, Any] = {}
@@ -615,6 +618,10 @@ def build_commands(
         *video_encoder_args,
         "-pix_fmt", "yuv420p",
     ]
+    if final_sharpen > 0:
+        ffmpeg_command.extend(
+            ["-vf", f"unsharp=3:3:{final_sharpen:.6g}:3:3:0"]
+        )
     af = audio_filter(settings)
     if af and args.audio_codec == "copy":
         raise ValueError("Audio stream copy cannot be combined with timescale audio filtering")
@@ -635,6 +642,8 @@ def build_commands(
         active_engines.append(f"interpolate:{settings['interpolation_method']}")
     if settings["blur"]:
         active_engines.append("motion-blur:akarin")
+    if final_sharpen > 0:
+        active_engines.append(f"final-luma-sharpen:{final_sharpen:.6g}")
     encoder_device_applied = args.encoder_device is not None and encoder.endswith("_nvenc")
     rife_index = int(settings["rife_gpu_index"])
     device_mapping = map_host_adapter_to_vulkan(
@@ -669,6 +678,7 @@ def build_commands(
             "requested": str(requested_rate),
             "executed": interpolation_executed,
         },
+        "final_sharpen": final_sharpen,
         "performance": performance,
         "settings": settings,
     }
@@ -1039,6 +1049,12 @@ def parser() -> argparse.ArgumentParser:
         help="auto/h264 keeps AVC compatibility; h265/hevc selects a vendor-matched HEVC encoder",
     )
     result.add_argument("--quality", type=int, default=None)
+    result.add_argument(
+        "--final-sharpen",
+        type=float,
+        default=0.0,
+        help="Final 3x3 luma-only unsharp amount after frame blending (0 to 1.5)",
+    )
     result.add_argument(
         "--encoder-device",
         type=int,

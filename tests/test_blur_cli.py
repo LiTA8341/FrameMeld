@@ -35,6 +35,7 @@ class FfmpegCliTranslationTests(unittest.TestCase):
         self.assertIn("rife-binding-json-v1", capabilities["features"])
         self.assertIn("source-relative-fast-policy-v1", capabilities["features"])
         self.assertIn("phase-aware-downsample-v1", capabilities["features"])
+        self.assertIn("final-luma-sharpen-v1", capabilities["features"])
 
     def test_device_inventory_endpoint_keeps_index_spaces_distinct(self) -> None:
         inventory = {"status": "succeeded", "devices": [{"index": 1, "name": "GPU"}]}
@@ -96,6 +97,15 @@ class FfmpegCliTranslationTests(unittest.TestCase):
         self.assertEqual(
             translated,
             ["input.mp4", "output.mp4", "--status-json-lines"],
+        )
+
+    def test_final_sharpen_option_is_forwarded(self) -> None:
+        translated = framemeld_cli.translate(
+            ["-i", "input.mp4", "--final-sharpen", "0.15", "output.mp4"]
+        )
+        self.assertEqual(
+            translated,
+            ["input.mp4", "output.mp4", "--final-sharpen", "0.15"],
         )
 
     def test_rife_adapter_metadata_and_gpu_are_independent_from_encoder_device(self) -> None:
@@ -369,6 +379,84 @@ class FullExportFallbackTests(unittest.TestCase):
                 events[-1]["devices"]["encoder"]["host_planned_adapter"]["stable_id"],
                 "luid:test",
             )
+
+
+class FinalSharpenTests(unittest.TestCase):
+    def build_with_amount(self, amount: str | None) -> tuple[list[str], dict[str, object]]:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "framemeld-runtime"
+            source = root / "input.mp4"
+            output = root / "output.mp4"
+            required = (
+                root / "lib" / "ffmpeg" / "ffmpeg-core.exe",
+                root / "lib" / "ffmpeg" / "ffprobe.exe",
+                root / "lib" / "vapoursynth" / "VSPipe.exe",
+                root / "lib" / "engine_entry.py",
+                root / "lib" / "models" / "rife-v4.26_ensembleFalse" / "flownet.bin",
+                root / "lib" / "models" / "rife-v4.26_ensembleFalse" / "flownet.param",
+            )
+            for path in required:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"test")
+            (root / "presets").mkdir()
+            (root / "presets" / "balanced.json").write_text("{}", encoding="utf-8")
+            source.write_bytes(b"test")
+            argv = [str(source), str(output)]
+            if amount is not None:
+                argv.extend(["--final-sharpen", amount])
+            args = insight_blur.parser().parse_args(argv)
+            encoder_plan = SimpleNamespace(
+                selected="libx264",
+                fallback=None,
+                gpu_vendors=(),
+                attempts=(),
+            )
+
+            with (
+                patch.object(insight_blur, "runtime_root", return_value=root),
+                patch.object(
+                    insight_blur,
+                    "probe_video",
+                    return_value={"fps_num": 60, "fps_den": 1, "color_range": "tv"},
+                ),
+                patch.object(insight_blur, "select_encoder", return_value=encoder_plan),
+                patch.object(insight_blur, "encoder_args", return_value=["-c:v", "libx264"]),
+            ):
+                _vspipe_command, ffmpeg_command, detail = insight_blur.build_commands(args)
+            return ffmpeg_command, detail
+
+    def test_default_preserves_existing_output_without_sharpen(self) -> None:
+        ffmpeg_command, detail = self.build_with_amount(None)
+
+        self.assertNotIn("-vf", ffmpeg_command)
+        self.assertEqual(detail["final_sharpen"], 0.0)
+        self.assertNotIn("final-luma-sharpen", str(detail["engine"]))
+
+    def test_light_and_override_amounts_apply_final_luma_only_unsharp(self) -> None:
+        for amount in ("0.15", "0.18"):
+            with self.subTest(amount=amount):
+                ffmpeg_command, detail = self.build_with_amount(amount)
+                filter_index = ffmpeg_command.index("-vf")
+
+                self.assertEqual(
+                    ffmpeg_command[filter_index + 1],
+                    f"unsharp=3:3:{amount}:3:3:0",
+                )
+                self.assertGreater(filter_index, ffmpeg_command.index("-pix_fmt"))
+                self.assertEqual(detail["final_sharpen"], float(amount))
+                self.assertIn(f"final-luma-sharpen:{amount}", str(detail["engine"]))
+
+    def test_zero_explicitly_disables_sharpen(self) -> None:
+        ffmpeg_command, detail = self.build_with_amount("0")
+
+        self.assertNotIn("-vf", ffmpeg_command)
+        self.assertEqual(detail["final_sharpen"], 0.0)
+
+    def test_amount_outside_supported_range_is_rejected(self) -> None:
+        for amount in ("-0.01", "1.51"):
+            with self.subTest(amount=amount):
+                with self.assertRaisesRegex(ValueError, "between 0 and 1.5"):
+                    self.build_with_amount(amount)
 
 
 class UnicodeRuntimePathTests(unittest.TestCase):

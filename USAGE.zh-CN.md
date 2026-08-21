@@ -80,6 +80,19 @@ CLI/API，Insight Agent 继续传 `--performance-mode balanced` 即可，无需�
 之间线性采样，避免旧的向下取整造成周期性的节奏偏移；NTSC 分数帧率也使用其
 精确有理数时间轴。180→360 的 `amount=0.925` 仍对应 5→7 抽头的 70% 插值。
 
+## 最终锐化
+
+`--final-sharpen AMOUNT` 会在补帧和运动模糊完成后、最终编码时增加一次 3×3
+亮度通道锐化，不处理色度通道。已确认的轻度值是 `0.15`；传 `0` 可以关闭，
+也可以传 `0` 到 `1.5` 之间的其他值覆盖。FrameMeld 独立 CLI 默认为 `0`，由
+Insight Agent 等宿主程序按自己的预设显式传入默认值。
+
+```powershell
+dist\framemeld-runtime\ffmpeg.exe -framemeld `
+  -i input.mp4 --performance-mode balanced --final-sharpen 0.15 `
+  -c:v h264 output-sharp.mp4
+```
+
 ## 常用命令
 
 只补帧、不添加运动模糊：

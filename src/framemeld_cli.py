@@ -18,6 +18,7 @@ CAPABILITIES = {
         "auto-profile",
         "source-relative-fast-policy-v1",
         "phase-aware-downsample-v1",
+        "final-luma-sharpen-v1",
         "rife",
         "motion-blur",
         "host-managed-encoder-fallback",
@@ -68,7 +69,8 @@ Performance modes:
 
 Balanced/adaptive use explicit settings first, then the Fast frame-rate table,
 then the generic 240 FPS target. The recognition tolerance does not round the
-source timeline. Explicit --blur-amount always wins.
+source timeline. Explicit --blur-amount always wins. Use --final-sharpen 0.15
+to apply a light luma-only sharpen after frame blending; 0 disables it.
 """
 
 
