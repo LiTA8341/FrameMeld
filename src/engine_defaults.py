@@ -11,6 +11,7 @@ from typing import Any
 
 BUILD_FLAVOR = "fast"
 POLICY_ID = "source-relative-fast-v1"
+VERSION = "0.1.5"
 
 
 DEFAULT_SETTINGS: dict[str, Any] = {

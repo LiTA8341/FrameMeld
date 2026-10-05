@@ -1,5 +1,8 @@
 # FrameMeld
 
+**0.1.5** ships FFmpeg/FFprobe **9.0.2 full build** and promotes the
+0.1.4-fast.2 frame policy to the main release. Download the complete runtime.
+
 FrameMeld builds a Windows, headless, FFmpeg-compatible runtime for GPU frame
 interpolation, duplicate-frame repair, motion blur, time scaling, and color
 processing. Ordinary FFmpeg and FFprobe commands are forwarded unchanged;
@@ -35,6 +38,7 @@ Run the unit tests and runtime checks with:
 python -m unittest discover -s tests -v
 powershell -ExecutionPolicy Bypass -File .\scripts\smoke-test.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-engine.ps1
+python scripts/verify-runtime.py dist/framemeld-runtime
 ```
 
 ## Command line
@@ -106,10 +110,15 @@ pass during the final encode, after interpolation and motion-blur blending.
 Use `--final-sharpen 0.15` for the tested light profile, `0` to disable it, or
 another value from `0` through `1.5` for a host-controlled override. The CLI
 default remains `0` for compatibility with existing standalone callers.
+Use `--sharpen-only --final-sharpen 0.15` for spatial sharpening without
+interpolation, duplicate repair, motion blur, time scaling, or color adjustment;
+the input frame rate is preserved. Capabilities report `version=0.1.5` and
+`independent-sharpen-v1`. Hosts must check both before exposing independent
+sharpening controls; the older `final-luma-sharpen-v1` flag alone is insufficient.
 
 ## Automatic frame-rate policy
 
-This branch builds the separately distributed **FrameMeld Fast** runtime
+FrameMeld 0.1.5 retains the validated **Fast** runtime policy
 (`build_flavor=fast`, `policy_id=source-relative-fast-v1`). It keeps the same
 CLI/API as the normal runtime, so a host that already passes
 `--performance-mode balanced` does not need a code change. Replace the entire

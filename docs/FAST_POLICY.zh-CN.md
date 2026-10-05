@@ -1,6 +1,6 @@
 # FrameMeld Fast：源帧率相对补帧策略
 
-- 版本：`V0.1.4-fast.1`
+- 策略最初发布于 `V0.1.4-fast.1`，由 `V0.1.5` 正式版继承。
 - 构建类型：`fast`
 - 策略 ID：`source-relative-fast-v1`
 

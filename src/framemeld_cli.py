@@ -6,12 +6,13 @@ import json
 import sys
 
 import insight_blur
-from engine_defaults import BUILD_FLAVOR, POLICY_ID
+from engine_defaults import BUILD_FLAVOR, POLICY_ID, VERSION
 
 
 CAPABILITIES = {
     "protocol": "org.framemeld.cli",
     "api_version": 1,
+    "version": VERSION,
     "build_flavor": BUILD_FLAVOR,
     "policy_id": POLICY_ID,
     "features": [
@@ -19,6 +20,7 @@ CAPABILITIES = {
         "source-relative-fast-policy-v1",
         "phase-aware-downsample-v1",
         "final-luma-sharpen-v1",
+        "independent-sharpen-v1",
         "rife",
         "motion-blur",
         "host-managed-encoder-fallback",
@@ -71,6 +73,9 @@ Balanced/adaptive use explicit settings first, then the Fast frame-rate table,
 then the generic 240 FPS target. The recognition tolerance does not round the
 source timeline. Explicit --blur-amount always wins. Use --final-sharpen 0.15
 to apply a light luma-only sharpen after frame blending; 0 disables it.
+Use --sharpen-only --final-sharpen 0.15 to preserve the source frame rate
+without interpolation, duplicate repair, or motion blur. Sharpening defaults
+to off and is independent of frame blending in FrameMeld 0.1.5.
 """
 
 

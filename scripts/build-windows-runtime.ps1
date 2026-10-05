@@ -188,7 +188,13 @@ try {
     Copy-Item -LiteralPath $modelBin -Destination (Join-Path $modelDir "flownet.bin") -Force
     Copy-Item -LiteralPath $modelParam -Destination (Join-Path $modelDir "flownet.param") -Force
 
-    Copy-Item -Path (Join-Path $RepoRoot "src\engine\insight_engine") -Destination $lib -Recurse -Force
+    $engineSource = Join-Path $RepoRoot "src\engine\insight_engine"
+    $engineDestination = Join-Path $lib "insight_engine"
+    New-Item -ItemType Directory -Force -Path $engineDestination | Out-Null
+    # Package source modules only, never workstation bytecode/cache files.
+    Get-ChildItem -LiteralPath $engineSource -File -Filter "*.py" | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination $engineDestination
+    }
     Copy-Item -LiteralPath (Join-Path $RepoRoot "src\engine\engine_entry.py") -Destination $lib -Force
     Copy-Item -LiteralPath (Join-Path $RepoRoot "src\insight_blur.py") -Destination $toolsDir -Force
     Copy-Item -LiteralPath (Join-Path $RepoRoot "src\encoder_selection.py") -Destination $toolsDir -Force
@@ -201,7 +207,11 @@ try {
     Copy-Item -LiteralPath (Join-Path $RepoRoot "USAGE.zh-CN.md") -Destination $OutputDirectory -Force
     Copy-Item -LiteralPath (Join-Path $RepoRoot "LICENSE") -Destination (Join-Path $OutputDirectory "LICENSE-GPL-3.0.txt") -Force
     Copy-Item -LiteralPath (Join-Path $RepoRoot "NOTICE.md") -Destination $OutputDirectory -Force
-    Copy-Item -Path (Join-Path $RepoRoot "docs") -Destination $OutputDirectory -Recurse -Force
+    $docsDir = Join-Path $OutputDirectory "docs"
+    New-Item -ItemType Directory -Force -Path $docsDir | Out-Null
+    foreach ($doc in @("ARCHITECTURE.zh-CN.md", "FAST_POLICY.zh-CN.md", "RELEASE-0.1.5.zh-CN.md")) {
+        Copy-Item -LiteralPath (Join-Path $RepoRoot "docs\$doc") -Destination $docsDir
+    }
     Copy-Item -LiteralPath (Join-Path $RepoRoot "config\windows-runtime.json") -Destination (Join-Path $OutputDirectory "runtime-manifest.json") -Force
 
     $launcher = Join-Path $OutputDirectory "ffmpeg.exe"
@@ -209,6 +219,15 @@ try {
     Copy-Item -LiteralPath $launcher -Destination (Join-Path $OutputDirectory "ffprobe.exe") -Force
 
     $ffmpeg = Join-Path $ffmpegDir "ffmpeg-core.exe"
+    Assert-Hash $ffmpeg $Manifest.ffmpeg.ffmpeg_sha256
+    Assert-Hash (Join-Path $ffmpegDir "ffprobe.exe") $Manifest.ffmpeg.ffprobe_sha256
+    foreach ($tool in @($launcher, $ffmpeg, (Join-Path $OutputDirectory "ffprobe.exe"), (Join-Path $ffmpegDir "ffprobe.exe"))) {
+        $versionOutput = & $tool -version 2>&1
+        $expectedVersion = [regex]::Escape($Manifest.ffmpeg.version)
+        if ($LASTEXITCODE -ne 0 -or $versionOutput[0] -notmatch "^ff(?:mpeg|probe) version $expectedVersion(?:-|\s)") {
+            throw "Unexpected binary version: $tool $($versionOutput[0])"
+        }
+    }
     $ffmpegInfo = & $ffmpeg -hide_banner -version 2>&1 | Select-Object -First 12
     $requiredFlags = @(
         "--enable-libx264", "--enable-libx265", "--enable-libplacebo",
@@ -252,6 +271,8 @@ try {
         $LASTEXITCODE -ne 0 -or
         $capabilities.protocol -ne "org.framemeld.cli" -or
         $capabilities.api_version -ne 1 -or
+        $capabilities.version -ne $Manifest.distribution.version -or
+        "independent-sharpen-v1" -notin $capabilities.features -or
         $capabilities.build_flavor -ne $Manifest.distribution.build_flavor -or
         $capabilities.policy_id -ne $Manifest.distribution.policy_id
     ) {

@@ -23,6 +23,8 @@ class FfmpegCliTranslationTests(unittest.TestCase):
         capabilities = json.loads(framemeld_cli.capabilities_json())
         self.assertEqual(capabilities["protocol"], "org.framemeld.cli")
         self.assertEqual(capabilities["api_version"], 1)
+        self.assertEqual(capabilities["version"], "0.1.5")
+        self.assertIn("independent-sharpen-v1", capabilities["features"])
         self.assertEqual(capabilities["license"], "GPL-3.0-only")
         self.assertEqual(capabilities["build_flavor"], "fast")
         self.assertEqual(capabilities["policy_id"], "source-relative-fast-v1")
@@ -382,7 +384,7 @@ class FullExportFallbackTests(unittest.TestCase):
 
 
 class FinalSharpenTests(unittest.TestCase):
-    def build_with_amount(self, amount: str | None) -> tuple[list[str], dict[str, object]]:
+    def build_with_amount(self, amount: str | None, *extra: str) -> tuple[list[str], dict[str, object]]:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "framemeld-runtime"
             source = root / "input.mp4"
@@ -401,7 +403,7 @@ class FinalSharpenTests(unittest.TestCase):
             (root / "presets").mkdir()
             (root / "presets" / "balanced.json").write_text("{}", encoding="utf-8")
             source.write_bytes(b"test")
-            argv = [str(source), str(output)]
+            argv = [str(source), str(output), *extra]
             if amount is not None:
                 argv.extend(["--final-sharpen", amount])
             args = insight_blur.parser().parse_args(argv)
@@ -453,10 +455,18 @@ class FinalSharpenTests(unittest.TestCase):
         self.assertEqual(detail["final_sharpen"], 0.0)
 
     def test_amount_outside_supported_range_is_rejected(self) -> None:
-        for amount in ("-0.01", "1.51"):
+        for amount in ("-0.01", "1.51", "nan", "inf"):
             with self.subTest(amount=amount):
                 with self.assertRaisesRegex(ValueError, "between 0 and 1.5"):
                     self.build_with_amount(amount)
+
+    def test_sharpen_only_disables_all_temporal_processing(self) -> None:
+        command, detail = self.build_with_amount("0.3", "--sharpen-only", "--interpolate-fps", "480")
+        for key in ("interpolate", "pre_interpolate", "deduplicate", "blur", "timescale", "filters"):
+            self.assertFalse(detail["settings"][key], key)
+        self.assertEqual(detail["engine"], "final-luma-sharpen:0.3")
+        self.assertFalse(detail["interpolation"]["executed"])
+        self.assertIn("unsharp=3:3:0.3:3:3:0", command)
 
 
 class UnicodeRuntimePathTests(unittest.TestCase):

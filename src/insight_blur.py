@@ -471,7 +471,7 @@ def build_commands(
     if source == output:
         raise ValueError("Input and output paths must differ")
     final_sharpen = float(args.final_sharpen)
-    if final_sharpen < 0 or final_sharpen > 1.5:
+    if not 0 <= final_sharpen <= 1.5:
         raise ValueError("final_sharpen must be between 0 and 1.5")
     output.parent.mkdir(parents=True, exist_ok=True)
     info = probe_video(ffprobe, source)
@@ -530,6 +530,11 @@ def build_commands(
         "quality": args.quality,
     }
     overrides.update({key: value for key, value in cli_values.items() if value is not None})
+    if args.sharpen_only:
+        # The independent spatial-only mode must never invoke temporal work,
+        # including options inherited from a preset or configuration file.
+        overrides.update(interpolate=False, pre_interpolate=False,
+                         deduplicate=False, blur=False, timescale=False, filters=False)
     explicit_blur_amount = "blur_amount" in overrides
     # RIFE's Windows model preflight uses a narrow-character path.  Supplying
     # the pinned ASCII-only path relative to the VapourSynth script directory
@@ -1049,6 +1054,10 @@ def parser() -> argparse.ArgumentParser:
         help="auto/h264 keeps AVC compatibility; h265/hevc selects a vendor-matched HEVC encoder",
     )
     result.add_argument("--quality", type=int, default=None)
+    result.add_argument(
+        "--sharpen-only", action="store_true",
+        help="Preserve source frame rate; disable interpolation, deduplication and motion blur",
+    )
     result.add_argument(
         "--final-sharpen",
         type=float,

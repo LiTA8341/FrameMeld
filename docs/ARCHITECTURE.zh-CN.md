@@ -49,8 +49,8 @@ FrameMeld。
 
 ## 决策与性能约束
 
-Fast 分支以 `source-relative-fast-v1` 重定义内部 `balanced` 自动表，但不改变
-FrameMeld 的 CLI/API。这样 Insight Agent 无需感知版本；普通版与 Fast 版通过
+0.1.5 继承 Fast 的 `source-relative-fast-v1` 内部 `balanced` 自动表，保持
+FrameMeld 的 API 1。独立锐化通过产品版本和 `independent-sharpen-v1` 能力识别；各版本通过
 完整运行时目录隔离，不能混合替换其中的可执行文件、Python 工具或帧引擎模块。
 
 RIFE 的 RGBS 转换、模型参数、GPU 索引和 Vulkan 调用保持固定；NVIDIA、AMD、

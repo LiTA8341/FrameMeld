@@ -1,5 +1,8 @@
 # FrameMeld 使用说明
 
+当前正式版本为 **0.1.5**，内置 FFmpeg/FFprobe **9.0.2 full build**，
+继承 0.1.4-fast.2 的帧处理策略。
+
 ## 基本用法
 
 构建完成后的入口是：
@@ -52,9 +55,9 @@ index、主程序计划的适配器、设备绑定状态、帧进度、子进程
 - `balanced`：Fast 版使用降一档的源帧率相对策略，默认推荐。
 - `adaptive`：时间轴与 `balanced` 相同，仅对近静止帧对跳过无收益的 RIFE 推理。
 
-本分支构建的是独立的 **FrameMeld Fast** 运行时，能力信息会报告
+0.1.5 正式版继承 **FrameMeld Fast** 策略，能力信息会报告
 `build_flavor=fast` 和 `policy_id=source-relative-fast-v1`。它与普通版保持相同的
-CLI/API，Insight Agent 继续传 `--performance-mode balanced` 即可，无需改代码。
+CLI/API，既有帧混合调用继续传 `--performance-mode balanced` 即可。
 切换版本时必须替换完整 FrameMeld 运行时目录，不能只替换 `ffmpeg.exe`，因为
 策略和帧引擎实际位于 `tools/` 与 `lib/`。
 
@@ -86,6 +89,13 @@ CLI/API，Insight Agent 继续传 `--performance-mode balanced` 即可，无需�
 亮度通道锐化，不处理色度通道。已确认的轻度值是 `0.15`；传 `0` 可以关闭，
 也可以传 `0` 到 `1.5` 之间的其他值覆盖。FrameMeld 独立 CLI 默认为 `0`，由
 Insight Agent 等宿主程序按自己的预设显式传入默认值。
+
+0.1.5 支持 `--sharpen-only --final-sharpen 0.15`：保持输入帧率，关闭补帧、
+去重、动态模糊、变速与颜色调整，仅在最终编码时锐化。锐化为 `0` 时关闭。
+新版 Insight Agent 的独立锐化开关默认关闭，滑条默认 `0.15`，范围 `0.10–0.30`。
+帧混合与锐化可以任意组合；只开帧混合时不再隐含锐化。
+宿主通过产品版本 `version=0.1.5` 和 `independent-sharpen-v1` 能力识别新版本。
+旧 `final-luma-sharpen-v1` 能力不能单独作为独立锐化开关的启用依据。
 
 ```powershell
 dist\framemeld-runtime\ffmpeg.exe -framemeld `

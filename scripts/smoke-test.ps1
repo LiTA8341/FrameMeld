@@ -23,11 +23,15 @@ $timer = [Diagnostics.Stopwatch]::StartNew()
 $timer.Stop()
 if ($LASTEXITCODE -ne 0) { throw "RIFE render smoke test failed." }
 
-$result = & $ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,avg_frame_rate -show_entries format=duration -of json $output | ConvertFrom-Json
+$result = & $ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=codec_name,width,height,avg_frame_rate,duration,nb_read_frames -show_entries format=duration -of json $output | ConvertFrom-Json
 if (
     -not $result.streams -or
     $result.streams[0].codec_name -ne "hevc" -or
-    $result.streams[0].avg_frame_rate -ne "60/1"
+    $result.streams[0].avg_frame_rate -ne "60/1" -or
+    [int]$result.streams[0].nb_read_frames -ne ($Seconds * 60) -or
+    [math]::Abs([double]$result.streams[0].duration - $Seconds) -gt (1.0 / 60)
 ) { throw "Unexpected HEVC smoke-test output." }
+$tail = & $ffmpeg -v error -ss ($Seconds - 0.1) -i $output -frames:v 1 -an -f framemd5 - 2>&1
+if ($LASTEXITCODE -ne 0 -or -not ($tail -match '^0,')) { throw "Smoke-test tail is not decodable." }
 Write-Host "Smoke test passed in $([math]::Round($timer.Elapsed.TotalSeconds, 2)) seconds" -ForegroundColor Green
 $result | ConvertTo-Json -Depth 5

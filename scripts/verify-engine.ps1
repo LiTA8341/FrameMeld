@@ -42,6 +42,15 @@ function Invoke-EngineCase {
     if ($code -ne 0) { throw "Engine case failed: $Name" }
     $fps = & $ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of default=nw=1:nk=1 $output
     if ($fps -ne $ExpectedFps) { throw "Unexpected FPS for $Name`: $fps (expected $ExpectedFps)" }
+    $stream = (& $ffprobe -v error -select_streams v:0 -count_frames -show_entries stream=duration,nb_read_frames -of json $output | ConvertFrom-Json).streams[0]
+    $duration = if ($Name -eq "blur-timescale-color") { $Seconds * 2 } else { $Seconds }
+    $rateParts = $ExpectedFps.Split('/')
+    $rate = [double]$rateParts[0] / [double]$rateParts[1]
+    if ([math]::Abs([double]$stream.duration - $duration) -gt (1.0 / $rate) -or [int]$stream.nb_read_frames -ne [math]::Round($rate * $duration)) {
+        throw "Incomplete video for $Name`: $($stream | ConvertTo-Json -Compress)"
+    }
+    $tail = & $ffmpeg -v error -ss ($duration - 0.1) -i $output -frames:v 1 -an -f framemd5 - 2>&1
+    if ($LASTEXITCODE -ne 0 -or -not ($tail -match '^0,')) { throw "Undecodable final frames: $Name" }
     $results.Add([pscustomobject]@{
         Case = $Name
         Seconds = [math]::Round($timer.Elapsed.TotalSeconds, 3)
@@ -50,6 +59,9 @@ function Invoke-EngineCase {
 }
 
 Invoke-EngineCase "rife-interpolation" $normalInput "120/1" @("--interpolate-fps", "120", "--no-blur", "--no-deduplicate")
+Invoke-EngineCase "sharpen-only-min" $fast90Input "90/1" @("--sharpen-only", "--final-sharpen", "0.1")
+Invoke-EngineCase "sharpen-only-max" $fast144Input "144/1" @("--sharpen-only", "--final-sharpen", "0.3")
+Invoke-EngineCase "blend-and-sharpen" $normalInput "60/1" @("--final-sharpen", "0.15")
 Invoke-EngineCase "rife-motion-blur" $normalInput "60/1" @("--interpolate-fps", "120", "--blur-output-fps", "60", "--no-deduplicate")
 Invoke-EngineCase "rife-balanced-policy" $normalInput "240/1" @("--performance-mode", "balanced", "--no-blur", "--no-deduplicate")
 Invoke-EngineCase "rife-adaptive-policy" $normalInput "240/1" @("--performance-mode", "adaptive", "--no-blur", "--no-deduplicate")
